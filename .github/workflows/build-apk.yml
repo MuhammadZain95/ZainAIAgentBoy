@@ -30,8 +30,8 @@ jobs:
           java -version
           JAVA_VER=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}' | awk -F '.' '{print $1}')
           echo "Detected Java Major Version: $JAVA_VER"
-          if [ -z "$JAVA_VER" ] || [ "$JAVA_VER" -lt 17 ]; then
-            echo "Error: Java 17 or higher is required. Found version: $JAVA_VER"
+          if ! [[ "$JAVA_VER" =~ ^[0-9]+$ ]] || [ "$JAVA_VER" -lt 17 ]; then
+            echo "Error: Java 17 or higher is required. Found version: '$JAVA_VER'"
             exit 1
           fi
 
@@ -44,7 +44,7 @@ jobs:
         run: |
           if [ ! -f ./debug.keystore ]; then
             echo "Generating temporary debug keystore..."
-            keytool -genkey -v \
+            keytool -genkeypair -v \
               -keystore ./debug.keystore \
               -storepass android \
               -alias androiddebugkey \
@@ -65,11 +65,17 @@ jobs:
           APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
           if [ ! -f "$APK_PATH" ]; then
             echo "Error: APK not found at $APK_PATH. Searching app/build/outputs/apk..."
-            find app/build/outputs/apk -name "*.apk"
+            if [ -d "app/build/outputs/apk" ]; then
+              find app/build/outputs/apk -name "*.apk"
+            fi
             exit 1
           fi
           if [ ! -s "$APK_PATH" ]; then
             echo "Error: APK file is empty!"
+            exit 1
+          fi
+          if [[ "$APK_PATH" != *.apk ]]; then
+            echo "Error: APK file does not end in .apk"
             exit 1
           fi
           ls -lh "$APK_PATH"
@@ -79,6 +85,7 @@ jobs:
         with:
           name: app-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
 
       - name: Publish GitHub Release
         env:

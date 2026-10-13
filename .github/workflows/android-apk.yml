@@ -28,7 +28,7 @@ jobs:
           cache-provider: basic
 
       - name: Build debug APK
-        run: gradle --no-daemon assembleDebug
+        run: gradle --no-daemon assembleDebug --stacktrace --info
 
       - name: Verify APK exists
         run: |
